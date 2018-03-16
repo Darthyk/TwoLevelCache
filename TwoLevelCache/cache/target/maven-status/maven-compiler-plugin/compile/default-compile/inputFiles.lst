@@ -1,0 +1,10 @@
+C:\Users\Vladislav Sazhin\IdeaProjects\TwoLevelCache\cache\src\main\java\com\github\darthyk\cache\MemoryCache.java
+C:\Users\Vladislav Sazhin\IdeaProjects\TwoLevelCache\cache\src\main\java\com\github\darthyk\cache\TwoLevelCache.java
+C:\Users\Vladislav Sazhin\IdeaProjects\TwoLevelCache\cache\src\main\java\com\github\darthyk\cache\Cache.java
+C:\Users\Vladislav Sazhin\IdeaProjects\TwoLevelCache\cache\src\main\java\com\github\darthyk\cache\strategies\MostRecentlyUsed.java
+C:\Users\Vladislav Sazhin\IdeaProjects\TwoLevelCache\cache\src\main\java\com\github\darthyk\cache\FileSystemCache.java
+C:\Users\Vladislav Sazhin\IdeaProjects\TwoLevelCache\cache\src\main\java\com\github\darthyk\cache\strategies\Strategy.java
+C:\Users\Vladislav Sazhin\IdeaProjects\TwoLevelCache\cache\src\main\java\com\github\darthyk\cache\strategies\LeastFrequentlyUsed.java
+C:\Users\Vladislav Sazhin\IdeaProjects\TwoLevelCache\cache\src\main\java\com\github\darthyk\cache\strategies\StrategyComparator.java
+C:\Users\Vladislav Sazhin\IdeaProjects\TwoLevelCache\cache\src\main\java\com\github\darthyk\cache\FrequencyUsedObject.java
+C:\Users\Vladislav Sazhin\IdeaProjects\TwoLevelCache\cache\src\main\java\com\github\darthyk\cache\strategies\LeastRecentlyUsed.java
