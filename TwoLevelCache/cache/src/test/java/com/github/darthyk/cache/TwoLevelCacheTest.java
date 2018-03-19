@@ -1,11 +1,11 @@
 package com.github.darthyk.cache;
 
 import com.github.darthyk.cache.strategies.LeastFrequentlyUsed;
+import com.github.darthyk.cache.strategies.LeastRecentlyUsed;
+import com.github.darthyk.cache.strategies.MostRecentlyUsed;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.Random;
 
 import static junit.framework.TestCase.*;
 
@@ -48,8 +48,8 @@ public class TwoLevelCacheTest extends TestData {
     }
 
     @Test
-    public void checkRebalance() {
-        cache = new TwoLevelCache(5, 5, new LeastFrequentlyUsed());
+    public void checkMostRecentlyUsedStrategy() {
+        cache = new TwoLevelCache(4, 4, new MostRecentlyUsed());
         cache.putToCache(1, 6256);
         cache.putToCache(2, 6546);
         cache.putToCache(3, 63656);
@@ -58,12 +58,75 @@ public class TwoLevelCacheTest extends TestData {
         cache.putToCache(6, 547);
         cache.putToCache(7, 5683);
         cache.putToCache(8, 3435);
-        cache.putToCache(9, 5683);
-        cache.putToCache(10, 345375);
-        for (int i = 0; i < 10000; i++) {
-            cache.getObject((int)((new Random().nextInt(10)) + 1));
-            System.out.println(cache.getCacheUsage());
+        for (int i = 0; i < 10; i++) {
+            cache.getObject(1);
         }
+        for (int i = 0; i < 1000; i++) {
+            cache.getObject(2);
+        }
+        final int lastUsedObjectKey = 6;
+        for (int i = 0; i < 100; i++) {
+            cache.getObject(lastUsedObjectKey);
+        }
+        int keyToBeDeleted = (int)cache.getKeyToBeDeleted();
+        assertEquals("Expected key for deletion should be " + lastUsedObjectKey, lastUsedObjectKey, keyToBeDeleted);
+        cache.putToCache(11, 77777777);
+        assertFalse("Object with key " + keyToBeDeleted + " wasn't deleted after substitution",
+                cache.containsKey(keyToBeDeleted));
+    }
+
+    @Test
+    public void checkLeastFrequentlyUsedStrategy() {
+        cache = new TwoLevelCache(4, 4, new LeastFrequentlyUsed());
+        cache.putToCache(1, 6256);
+        cache.putToCache(2, 6546);
+        cache.putToCache(3, 63656);
+        cache.putToCache(4, 6376);
+        cache.putToCache(5, 6056);
+        cache.putToCache(6, 547);
+        cache.putToCache(7, 5683);
+        cache.putToCache(8, 3435);
+        final int notUsedObjectKey = 8;
+        for (int i = 0; i < 10; i++) {
+            for (int j = 1; j < notUsedObjectKey; j++) {
+                cache.getObject(j);
+            }
+        }
+        int keyToBeDeleted = (int)cache.getKeyToBeDeleted();
+        assertEquals("Expected key for deletion should be " + notUsedObjectKey, notUsedObjectKey, keyToBeDeleted);
+        cache.putToCache(11, 77777777);
+        assertFalse("Object with key " + keyToBeDeleted + " wasn't deleted after substitution",
+                cache.containsKey(keyToBeDeleted));
+    }
+
+    @Test
+    public void checkLeastRecentlyUsedStrategy() {
+        cache = new TwoLevelCache(4, 4, new LeastRecentlyUsed());
+        cache.putToCache(1, 6256);
+        cache.putToCache(2, 6546);
+        cache.putToCache(3, 63656);
+        cache.putToCache(4, 6376);
+        cache.putToCache(5, 6056);
+        cache.putToCache(6, 547);
+        cache.putToCache(7, 5683);
+        cache.putToCache(8, 3435);
+        final int firstUsedObjectKey = 1;
+        cache.getObject(firstUsedObjectKey);
+        for (int i = 0; i < 10; i++) {
+            for (int j = 2; j <= 8; j++) {
+                cache.getObject(j);
+            }
+        }
+        int keyToBeDeleted = (int)cache.getKeyToBeDeleted();
+        assertEquals("Expected key for deletion should be " + firstUsedObjectKey, firstUsedObjectKey, keyToBeDeleted);
+        cache.putToCache(11, 77777777);
+        assertFalse("Object with key " + keyToBeDeleted + " wasn't deleted after substitution",
+                cache.containsKey(keyToBeDeleted));
+    }
+
+    @Test
+    public void checkStrategy() {
+
     }
 
     @Test

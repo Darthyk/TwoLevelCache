@@ -27,6 +27,7 @@ public class LeastRecentlyUsed<K> implements Strategy<K> {
     @Override
     public K getCandidateForMemoryCache() {
         TreeMap<K, Long> sortedValues = new TreeMap<>(new StrategyComparator(frequencyData));
+        sortedValues.putAll(frequencyData);
         return sortedValues.lastEntry().getKey();
     }
 
@@ -43,6 +44,7 @@ public class LeastRecentlyUsed<K> implements Strategy<K> {
     @Override
     public K getKeyForSubstitution() {
         TreeMap<K, Long> sortedValues = new TreeMap<>(new StrategyComparator(frequencyData));
+        sortedValues.putAll(frequencyData);
         return sortedValues.firstEntry().getKey();
     }
 }

@@ -6,24 +6,24 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.HashMap;
+import java.util.TreeMap;
+import java.util.UUID;
 
 /**
  * Class represents work with file system memory cache.
  * <p>
- * NOTE: All vlaues will be stored in one file
+ * NOTE: each value will be stored in separate file.
  *
  * @param <K> any key value
  * @param <V> any value
  * @author Vladislav Sazhin
  */
 @Slf4j
-public class FileSystemCache<K extends Serializable, V extends Serializable> implements Cache<K, V> {
-    HashMap<K, V> cacheMap;
+public class FileSystemCache2<K extends Serializable, V extends Serializable> implements Cache<K, V> {
+    HashMap<K, String> cacheMap;
     TreeMap<K, Long> frequencyMap;
     Path cachePath;
-    File cacheFile;
-    UUID cacheFileUUID = UUID.randomUUID();
     Strategy strategyType;
     int capacity;
 
@@ -32,15 +32,13 @@ public class FileSystemCache<K extends Serializable, V extends Serializable> imp
      *
      * @param capacity Cache size
      */
-    FileSystemCache(int capacity, Strategy strategyType) {
+    FileSystemCache2(int capacity, Strategy strategyType) {
         try {
             cachePath = Files.createTempDirectory("cache");
         } catch (IOException e) {
             log.error("Can't create directory");
         }
         cachePath.toFile().deleteOnExit();
-        cacheFile = new File(cachePath.toFile().getAbsolutePath() + File.separatorChar
-                + cacheFileUUID + ".tmp");
         cacheMap = new HashMap<>();
         frequencyMap = new TreeMap<>();
         this.strategyType = strategyType;
@@ -58,10 +56,10 @@ public class FileSystemCache<K extends Serializable, V extends Serializable> imp
         if(!hasEmptySpace()) {
             freeSpace();
         }
-        cacheMap.put(key, value);
+
         frequencyMap.put(key, strategyType.fillFrequency());
         strategyType.setFrequencyData(frequencyMap);
-        writeCacheToFile(cacheMap);
+        cacheMap.put(key, writeCacheToFile(value));
     }
 
     /**
@@ -72,7 +70,7 @@ public class FileSystemCache<K extends Serializable, V extends Serializable> imp
      * @param frequencyData {@code Long} value from previous cache
      */
     public void transferDataFromAnotherCache(K key, V value, Long frequencyData) {
-        cacheMap.put(key, value);
+        cacheMap.put(key, writeCacheToFile(value));
         frequencyMap.put(key, frequencyData);
         strategyType.setFrequencyData(frequencyMap);
     }
@@ -90,9 +88,11 @@ public class FileSystemCache<K extends Serializable, V extends Serializable> imp
     /**
      * Writes cache to file
      */
-    public synchronized void writeCacheToFile(Map<K, V> map) {
+    public synchronized String writeCacheToFile(V value) {
         FileOutputStream fileStream = null;
         ObjectOutputStream objectStream = null;
+        File cacheFile = new File(cachePath.toFile().getAbsolutePath() + File.separatorChar
+                + UUID.randomUUID() + ".tmp");
         try {
             fileStream = new FileOutputStream(cacheFile);
         } catch (FileNotFoundException e) {
@@ -100,7 +100,7 @@ public class FileSystemCache<K extends Serializable, V extends Serializable> imp
         }
         try {
             objectStream = new ObjectOutputStream(fileStream);
-            objectStream.writeObject(map);
+            objectStream.writeObject(value);
         } catch (IOException e) {
             log.error("Can't write to %s \n Stack trace:\n %s", cacheFile.getAbsolutePath(), e.getMessage());
         }
@@ -111,6 +111,7 @@ public class FileSystemCache<K extends Serializable, V extends Serializable> imp
         } catch (IOException e) {
             log.error("Can't close File and Object streams.\n Stack trace:\n %s", e.getMessage());
         }
+        return cacheFile.getAbsolutePath();
     }
 
     /**
@@ -125,7 +126,7 @@ public class FileSystemCache<K extends Serializable, V extends Serializable> imp
         if(containsKey(key)) {
             long frequency = frequencyMap.remove(key);
             frequencyMap.put(key, strategyType.updateFrequency(frequency));
-            return getDeserializedCacheMap().get(key);
+            return getDeserializedObject(cacheMap.get(key));
         } else
             return null;
     }
@@ -133,25 +134,25 @@ public class FileSystemCache<K extends Serializable, V extends Serializable> imp
     /**
      * Retrieves deserialized cache object
      *
-     * @return {@code HashMap} with cache
+     * @return deserialized cache object
      */
-    public synchronized HashMap<K, V> getDeserializedCacheMap() {
+    public synchronized V getDeserializedObject(String cacheFilePath) {
         FileInputStream fileInputStream = null;
         try {
-            fileInputStream = new FileInputStream(cacheFile.getAbsolutePath());
+            fileInputStream = new FileInputStream(cacheFilePath);
         } catch (FileNotFoundException e) {
-            log.error("Can't find file %s \n Stack trace:\n %s", cacheFile.getAbsolutePath(), e.getMessage());
+            log.error("Can't find file %s \n Stack trace:\n %s", cacheFilePath, e.getMessage());
         }
 
         ObjectInputStream objectInputStream = null;
-        HashMap<K, V> deserializedObject = null;
+        V deserializedObject = null;
         try {
             objectInputStream = new ObjectInputStream(fileInputStream);
-            deserializedObject = (HashMap<K, V>)objectInputStream.readObject();
+            deserializedObject = (V)objectInputStream.readObject();
         } catch (IOException e) {
-            log.error("Can't write to %s \n Stack trace:\n %s", cacheFile.getAbsolutePath(), e.getMessage());
+            log.error("Can't write to %s \n Stack trace:\n %s", cacheFilePath, e.getMessage());
         } catch (ClassNotFoundException e) {
-            log.error("Can't find %s class. \n Stack trace:\n %s", HashMap.class.getName(), e.getMessage());
+            log.error("Can't find class. \n Stack trace:\n %s", e.getMessage());
         }
 
         try {
@@ -164,27 +165,23 @@ public class FileSystemCache<K extends Serializable, V extends Serializable> imp
     }
 
     /**
-     * Deletes object from cache for provided key
+     * Deletes cache object for provided key
      *
      * @param key Key value
      */
     @Override
     public synchronized void deleteObject(K key) {
         if(containsKey(key)) {
-            cacheMap.remove(key);
+            String fileToDelete = cacheMap.remove(key);
             frequencyMap.remove(key);
-            if (cacheFile.delete()) {
-                new File(cachePath.toFile().getAbsolutePath() + File.pathSeparator
-                        + cacheFileUUID + ".tmp");
-            } else {
-                log.error("Can't delete file %s", cacheFile.getAbsolutePath());
+            if (!new File(fileToDelete).delete()) {
+                log.error("Can't delete file %s", fileToDelete);
             }
-            writeCacheToFile(cacheMap);
         }
     }
 
     /**
-     * Removes object from cache for provided key
+     * Removes cache object for provided key
      *
      * @param key Key value
      * @return Object value for provided key, {@code null} if key is absent
@@ -193,7 +190,7 @@ public class FileSystemCache<K extends Serializable, V extends Serializable> imp
     public V removeObject(K key) {
         if(containsKey(key)) {
             frequencyMap.remove(key);
-            V value = getDeserializedCacheMap().get(key);
+            V value = getDeserializedObject(cacheMap.get(key));
             deleteObject(key);
             return value;
         } else
@@ -205,13 +202,14 @@ public class FileSystemCache<K extends Serializable, V extends Serializable> imp
      */
     @Override
     public synchronized void clearCache() {
+        for (String path : cacheMap.values()) {
+            if (!new File(path).delete()) {
+                log.error("Can't delete file %s", path);
+            }
+        }
+
         cacheMap.clear();
         frequencyMap.clear();
-        if (cacheFile.delete()) {
-            log.error("Cache file %s has been deleted", cacheFile.getAbsolutePath());
-        } else {
-            log.error("Can't delete cache file %s", cacheFile.getAbsolutePath());
-        }
     }
 
     /**

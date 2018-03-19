@@ -5,6 +5,7 @@ import com.github.darthyk.cache.strategies.Strategy;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.Serializable;
+import java.util.Date;
 
 /**
  * Class represents work with two level cache - RAM memory cache and file system memory cache
@@ -182,6 +183,10 @@ public class TwoLevelCache<K extends Serializable, V extends Serializable> imple
             log.error("Object with key %s is absent in cache", key);
             return null;
         }
+    }
+
+    public K getKeyToBeDeleted() {
+        return (K)secondLevelCache.getStrategy().getKeyForSubstitution();
     }
 
     /**
