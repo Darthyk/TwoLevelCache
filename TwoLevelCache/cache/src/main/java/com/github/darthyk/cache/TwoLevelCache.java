@@ -5,7 +5,6 @@ import com.github.darthyk.cache.strategies.Strategy;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.Serializable;
-import java.util.Date;
 
 /**
  * Class represents work with two level cache - RAM memory cache and file system memory cache
@@ -58,16 +57,16 @@ public class TwoLevelCache<K extends Serializable, V extends Serializable> imple
     public void putToCache(K key, V value) {
         if(!firstLevelCache.containsKey(key) && !secondLevelCache.containsKey(key) && firstLevelCache.hasEmptySpace()) {
             firstLevelCache.putToCache(key, value);
-            firstLevelCache.getStrategy().setFrequencyData(firstLevelCache.getFrequencyMap());
+            firstLevelCache.getStrategy().setStrategyData(firstLevelCache.getStrategyMap());
             log.debug("Put object with key %s to first level cache", key);
         } else if (!secondLevelCache.containsKey(key) && secondLevelCache.hasEmptySpace()) {
             secondLevelCache.putToCache(key, value);
-            secondLevelCache.getStrategy().setFrequencyData(secondLevelCache.getFrequencyMap());
+            secondLevelCache.getStrategy().setStrategyData(secondLevelCache.getStrategyMap());
             log.debug("Put object with key %s to second level cache", key);
         } else {
             freeSpace();
             firstLevelCache.putToCache(key, value);
-            firstLevelCache.getStrategy().setFrequencyData(firstLevelCache.getFrequencyMap());
+            firstLevelCache.getStrategy().setStrategyData(firstLevelCache.getStrategyMap());
             log.debug("Put object with key %s to first level cache", key);
         }
 
@@ -83,7 +82,7 @@ public class TwoLevelCache<K extends Serializable, V extends Serializable> imple
         secondLevelCache.deleteObject(objectToDelete);
 
         K objectToMove = (K)firstLevelCache.getStrategy().getKeyForSubstitution();
-        Long frequencyData = firstLevelCache.getFrequencyMap().get(objectToMove);
+        Long frequencyData = firstLevelCache.getStrategyMap().get(objectToMove);
         V objectToMoveData = firstLevelCache.removeObject(objectToMove);
         log.debug("Move object with key %s according to substitution strategy %s from first level cache to second level",
                 objectToMove, firstLevelCache.getStrategy().getClass().getSimpleName());
@@ -100,8 +99,8 @@ public class TwoLevelCache<K extends Serializable, V extends Serializable> imple
      * @return information about cache usage
      */
     public String getCacheUsage() {
-        return new StringBuffer().append("First level cache usage: ").append(firstLevelCache.getFrequencyMap())
-                .append("; Second level cache usage: ").append(secondLevelCache.getFrequencyMap()).append("\n").toString();
+        return new StringBuffer().append("First level cache usage: ").append(firstLevelCache.getStrategyMap())
+                .append("; Second level cache usage: ").append(secondLevelCache.getStrategyMap()).append("\n").toString();
     }
 
     /**
@@ -111,8 +110,8 @@ public class TwoLevelCache<K extends Serializable, V extends Serializable> imple
         for (int iteration = 0; iteration < size()/4; ++iteration) {
             K candidateForSlowCache = (K)firstLevelCache.getStrategy().getKeyForSubstitution();
             K candidateForFastCache = (K)secondLevelCache.getStrategy().getCandidateForMemoryCache();
-            Long frequencyDataFirstLevel = firstLevelCache.getFrequencyMap().get(candidateForSlowCache);
-            Long frequencyDataSecondLevel = secondLevelCache.getFrequencyMap().get(candidateForFastCache);
+            Long frequencyDataFirstLevel = firstLevelCache.getStrategyMap().get(candidateForSlowCache);
+            Long frequencyDataSecondLevel = secondLevelCache.getStrategyMap().get(candidateForFastCache);
             V firstLevelValue = firstLevelCache.removeObject(candidateForSlowCache);
             V secondLevelValue = secondLevelCache.removeObject(candidateForFastCache);
             firstLevelCache.transferDataFromAnotherCache(candidateForFastCache, secondLevelValue, frequencyDataSecondLevel);
@@ -134,12 +133,12 @@ public class TwoLevelCache<K extends Serializable, V extends Serializable> imple
             callingCounter = 0;
         } else ++callingCounter;
         if(firstLevelCache.containsKey(key)) {
-            long frequency = firstLevelCache.getFrequencyMap().remove(key);
-            firstLevelCache.getFrequencyMap().put(key, firstLevelCache.getStrategy().updateFrequency(frequency));
+            long frequency = firstLevelCache.getStrategyMap().remove(key);
+            firstLevelCache.getStrategyMap().put(key, firstLevelCache.getStrategy().updateStrategyData(frequency));
             return firstLevelCache.getObject(key);
         } else if (secondLevelCache.containsKey(key)) {
-            long frequency = secondLevelCache.frequencyMap.remove(key);
-            secondLevelCache.frequencyMap.put(key, secondLevelCache.strategyType.updateFrequency(frequency));
+            long frequency = secondLevelCache.strategyMap.remove(key);
+            secondLevelCache.strategyMap.put(key, secondLevelCache.strategyType.updateStrategyData(frequency));
             return secondLevelCache.getObject(key);
         } else {
             return null;

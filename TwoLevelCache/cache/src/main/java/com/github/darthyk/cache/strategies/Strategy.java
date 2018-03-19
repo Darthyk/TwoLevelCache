@@ -6,15 +6,15 @@ public interface Strategy<K> {
 
     Strategy getInstance();
 
-    long fillFrequency();
+    long fillStrategyData();
 
     K getKeyForSubstitution();
 
-    long updateFrequency(long oldValue);
+    long updateStrategyData(long oldValue);
 
-    void setFrequencyData(Map<K, Long> frequencyData);
+    void setStrategyData(Map<K, Long> frequencyData);
 
-    Map<K, Long> getFrequencyData();
+    Map<K, Long> getStrategyData();
 
     K getCandidateForMemoryCache();
 }

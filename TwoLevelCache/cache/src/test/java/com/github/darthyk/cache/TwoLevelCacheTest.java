@@ -125,11 +125,6 @@ public class TwoLevelCacheTest extends TestData {
     }
 
     @Test
-    public void checkStrategy() {
-
-    }
-
-    @Test
     public void checkExistentObjectRetrieval() {
         Integer retrievedObject = (Integer)cache.getObject(IntegerData.FIRST.getKey());
         assertNotNull("Retrieved object mustn't be null", retrievedObject);

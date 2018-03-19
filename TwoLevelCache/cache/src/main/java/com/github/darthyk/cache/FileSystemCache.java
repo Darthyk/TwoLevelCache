@@ -20,7 +20,7 @@ import java.util.*;
 @Slf4j
 public class FileSystemCache<K extends Serializable, V extends Serializable> implements Cache<K, V> {
     HashMap<K, V> cacheMap;
-    TreeMap<K, Long> frequencyMap;
+    TreeMap<K, Long> strategyMap;
     Path cachePath;
     File cacheFile;
     UUID cacheFileUUID = UUID.randomUUID();
@@ -42,7 +42,7 @@ public class FileSystemCache<K extends Serializable, V extends Serializable> imp
         cacheFile = new File(cachePath.toFile().getAbsolutePath() + File.separatorChar
                 + cacheFileUUID + ".tmp");
         cacheMap = new HashMap<>();
-        frequencyMap = new TreeMap<>();
+        strategyMap = new TreeMap<>();
         this.strategyType = strategyType;
         this.capacity = capacity;
     }
@@ -59,8 +59,8 @@ public class FileSystemCache<K extends Serializable, V extends Serializable> imp
             freeSpace();
         }
         cacheMap.put(key, value);
-        frequencyMap.put(key, strategyType.fillFrequency());
-        strategyType.setFrequencyData(frequencyMap);
+        strategyMap.put(key, strategyType.fillStrategyData());
+        strategyType.setStrategyData(strategyMap);
         writeCacheToFile(cacheMap);
     }
 
@@ -73,8 +73,8 @@ public class FileSystemCache<K extends Serializable, V extends Serializable> imp
      */
     public void transferDataFromAnotherCache(K key, V value, Long frequencyData) {
         cacheMap.put(key, value);
-        frequencyMap.put(key, frequencyData);
-        strategyType.setFrequencyData(frequencyMap);
+        strategyMap.put(key, frequencyData);
+        strategyType.setStrategyData(strategyMap);
     }
 
     /**
@@ -118,13 +118,13 @@ public class FileSystemCache<K extends Serializable, V extends Serializable> imp
      * Increments frequency usage for provided object key.
      *
      * @param key Key object
-     * @return Value for provided key from cache, {@code null} if key objct is absent
+     * @return Value for provided key from cache, {@code null} if key object is absent
      */
     @Override
     public V getObject(K key) {
         if(containsKey(key)) {
-            long frequency = frequencyMap.remove(key);
-            frequencyMap.put(key, strategyType.updateFrequency(frequency));
+            long frequency = strategyMap.remove(key);
+            strategyMap.put(key, strategyType.updateStrategyData(frequency));
             return getDeserializedCacheMap().get(key);
         } else
             return null;
@@ -172,7 +172,7 @@ public class FileSystemCache<K extends Serializable, V extends Serializable> imp
     public synchronized void deleteObject(K key) {
         if(containsKey(key)) {
             cacheMap.remove(key);
-            frequencyMap.remove(key);
+            strategyMap.remove(key);
             if (cacheFile.delete()) {
                 new File(cachePath.toFile().getAbsolutePath() + File.pathSeparator
                         + cacheFileUUID + ".tmp");
@@ -192,7 +192,7 @@ public class FileSystemCache<K extends Serializable, V extends Serializable> imp
     @Override
     public V removeObject(K key) {
         if(containsKey(key)) {
-            frequencyMap.remove(key);
+            strategyMap.remove(key);
             V value = getDeserializedCacheMap().get(key);
             deleteObject(key);
             return value;
@@ -206,7 +206,7 @@ public class FileSystemCache<K extends Serializable, V extends Serializable> imp
     @Override
     public synchronized void clearCache() {
         cacheMap.clear();
-        frequencyMap.clear();
+        strategyMap.clear();
         if (cacheFile.delete()) {
             log.error("Cache file %s has been deleted", cacheFile.getAbsolutePath());
         } else {
@@ -260,8 +260,8 @@ public class FileSystemCache<K extends Serializable, V extends Serializable> imp
      *
      * @return frequency {@code TreeMap} for this cache
      */
-    public TreeMap<K, Long> getFrequencyMap() {
-        return this.frequencyMap;
+    public TreeMap<K, Long> getStrategyMap() {
+        return this.strategyMap;
     }
 
     /**

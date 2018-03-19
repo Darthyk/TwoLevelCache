@@ -16,7 +16,7 @@ import java.util.*;
 @Slf4j
 public class MemoryCache<K extends Serializable, V extends Serializable> implements Cache<K, V> {
     private HashMap<K, V> cacheMap;
-    private TreeMap<K, Long> frequencyMap;
+    private TreeMap<K, Long> strategyMap;
     private Strategy strategyType;
     private int capacity;
 
@@ -27,7 +27,7 @@ public class MemoryCache<K extends Serializable, V extends Serializable> impleme
      */
     MemoryCache(int capacity, Strategy strategyType) {
         this.cacheMap = new HashMap<>();
-        this.frequencyMap = new TreeMap<>();
+        this.strategyMap = new TreeMap<>();
         this.strategyType = strategyType;
         this.capacity = capacity;
     }
@@ -44,8 +44,8 @@ public class MemoryCache<K extends Serializable, V extends Serializable> impleme
             freeSpace();
         }
         cacheMap.put(key, value);
-        frequencyMap.put(key, strategyType.fillFrequency());
-        strategyType.setFrequencyData(frequencyMap);
+        strategyMap.put(key, strategyType.fillStrategyData());
+        strategyType.setStrategyData(strategyMap);
     }
 
     /**
@@ -57,8 +57,8 @@ public class MemoryCache<K extends Serializable, V extends Serializable> impleme
      */
     public void transferDataFromAnotherCache(K key, V value, Long frequencyData) {
         cacheMap.put(key, value);
-        frequencyMap.put(key, frequencyData);
-        strategyType.setFrequencyData(frequencyMap);
+        strategyMap.put(key, frequencyData);
+        strategyType.setStrategyData(strategyMap);
     }
 
     /**
@@ -82,8 +82,8 @@ public class MemoryCache<K extends Serializable, V extends Serializable> impleme
     @Override
     public V getObject(K key) {
         if(containsKey(key)) {
-            long frequency = frequencyMap.remove(key);
-            frequencyMap.put(key, strategyType.updateFrequency(frequency));
+            long frequency = strategyMap.remove(key);
+            strategyMap.put(key, strategyType.updateStrategyData(frequency));
             return cacheMap.get(key);
         } else
             return null;
@@ -98,7 +98,7 @@ public class MemoryCache<K extends Serializable, V extends Serializable> impleme
     public void deleteObject(K key) {
         if(containsKey(key)) {
             cacheMap.remove(key);
-            frequencyMap.remove(key);
+            strategyMap.remove(key);
         }
     }
 
@@ -111,7 +111,7 @@ public class MemoryCache<K extends Serializable, V extends Serializable> impleme
     @Override
     public V removeObject(K key) {
         if(containsKey(key)) {
-            frequencyMap.remove(key);
+            strategyMap.remove(key);
             return cacheMap.remove(key);
         } else
             return null;
@@ -123,7 +123,7 @@ public class MemoryCache<K extends Serializable, V extends Serializable> impleme
     @Override
     public void clearCache() {
         cacheMap.clear();
-        frequencyMap.clear();
+        strategyMap.clear();
     }
 
     /**
@@ -168,12 +168,12 @@ public class MemoryCache<K extends Serializable, V extends Serializable> impleme
     }
 
     /**
-     * Retrieves frequency {@code TreeMap} for this cache
+     * Retrieves strategy {@code TreeMap} for this cache
      *
-     * @return frequency {@code TreeMap} for this cache
+     * @return strategy {@code TreeMap} for this cache
      */
-    public TreeMap<K, Long> getFrequencyMap() {
-        return this.frequencyMap;
+    public TreeMap<K, Long> getStrategyMap() {
+        return this.strategyMap;
     }
 
     /**
